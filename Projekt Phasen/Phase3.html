@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay — Phase 03 · Datenbank & echte Task-API</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #080b0f;
+  --bg2:       #0d1117;
+  --bg3:       #161b22;
+  --bg4:       #1c2230;
+  --border:    #21262d;
+  --border2:   #30363d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --dim:       #484f58;
+  --green:     #3fb950;
+  --green-dim: #1a3a22;
+  --blue:      #58a6ff;
+  --blue-dim:  #0d2847;
+  --purple:    #bc8cff;
+  --purple-dim:#2a1a4a;
+  --orange:    #f0883e;
+  --orange-dim:#3a1f08;
+  --red:       #f85149;
+  --yellow:    #d29922;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none;z-index:100;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(63,185,80,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(63,185,80,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+::selection{background:rgba(63,185,80,.22);color:var(--text);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+a{color:var(--blue);text-decoration:none;transition:color .15s;}
+a:hover{color:var(--text);text-decoration:underline;}
+.page{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:48px 24px 80px;}
+.header{margin-bottom:56px;animation:fadeUp .6s ease both;}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+.project-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.project-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+h1{font-size:clamp(36px,6vw,60px);font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--text);}
+h1 span{color:var(--green);}
+.header-sub{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.header-sub span{display:flex;align-items:center;gap:6px;}
+.header-sub span::before{content:'//';color:var(--dim);}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;min-width:220px;}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;transition:border-color .15s,background .15s;cursor:default;}
+.stat:hover{border-color:var(--border2);background:var(--bg4);}
+.stat-n{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;line-height:1;}
+.stat-l{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.05em;text-transform:uppercase;}
+.section-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);transition:background .3s;}
+.section-title:hover::after{background:var(--border2);}
+.rules-block{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:48px;animation:fadeUp .6s .1s ease both;}
+.rules-titlebar{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+.dot-r{width:10px;height:10px;border-radius:50%;background:#f85149;transition:transform .15s;cursor:default;}
+.dot-y{width:10px;height:10px;border-radius:50%;background:#d29922;transition:transform .15s;cursor:default;}
+.dot-g{width:10px;height:10px;border-radius:50%;background:#3fb950;transition:transform .15s;cursor:default;}
+.dot-r:hover,.dot-y:hover,.dot-g:hover{transform:scale(1.3);}
+.rules-filename{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-left:8px;}
+.rules-body{padding:20px 24px;display:flex;flex-direction:column;gap:0;}
+.rule-line{display:flex;gap:16px;padding:10px 6px;border-bottom:1px solid var(--border);align-items:flex-start;border-radius:6px;margin-left:-6px;margin-right:-6px;transition:background .15s;}
+.rule-line:last-child{border-bottom:none;}
+.rule-line:hover{background:rgba(255,255,255,.025);}
+.rule-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);width:24px;flex-shrink:0;padding-top:1px;user-select:none;}
+.rule-icon{font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0;padding-top:1px;width:60px;}
+.rule-text{flex:1;}
+.rule-key{font-size:13px;font-weight:600;color:var(--text);}
+.rule-desc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6;}
+.rule-desc code{color:var(--orange);background:var(--orange-dim);padding:1px 5px;border-radius:3px;font-size:10px;transition:background .15s;}
+.rule-desc code:hover{background:rgba(240,136,62,.22);}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:48px;animation:fadeUp .6s .2s ease both;}
+.team-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;}
+.team-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.tc-green::before{background:var(--green);}
+.tc-blue::before{background:var(--blue);}
+.tc-purple::before{background:var(--purple);}
+.tc-green:hover{transform:translateY(-3px);border-color:rgba(63,185,80,.35);box-shadow:0 8px 24px rgba(63,185,80,.07);}
+.tc-blue:hover{transform:translateY(-3px);border-color:rgba(88,166,255,.35);box-shadow:0 8px 24px rgba(88,166,255,.07);}
+.tc-purple:hover{transform:translateY(-3px);border-color:rgba(188,140,255,.35);box-shadow:0 8px 24px rgba(188,140,255,.07);}
+.tc-green:hover .team-avatar{box-shadow:0 0 14px rgba(63,185,80,.25);}
+.tc-blue:hover .team-avatar{box-shadow:0 0 14px rgba(88,166,255,.25);}
+.tc-purple:hover .team-avatar{box-shadow:0 0 14px rgba(188,140,255,.25);}
+.team-avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:12px;font-family:'JetBrains Mono',monospace;}
+.ta-green{background:var(--green-dim);color:var(--green);}
+.ta-blue{background:var(--blue-dim);color:var(--blue);}
+.ta-purple{background:var(--purple-dim);color:var(--purple);}
+.team-name{font-size:15px;font-weight:700;}
+.team-handle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+.team-roles{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;}
+.role-pill{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;padding:3px 8px;border-radius:4px;letter-spacing:.04em;}
+.rp-green{background:var(--green-dim);color:var(--green);}
+.rp-blue{background:var(--blue-dim);color:var(--blue);}
+.rp-purple{background:var(--purple-dim);color:var(--purple);}
+.rp-dim{background:var(--bg4);color:var(--muted);}
+.person-section{margin-bottom:40px;animation:fadeUp .6s .3s ease both;}
+.person-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-bottom:none;border-radius:12px 12px 0 0;}
+.ph-avatar{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+.ph-info{flex:1;}
+.ph-name{font-size:14px;font-weight:600;}
+.ph-role{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+.ph-count{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+.task-list{background:var(--bg2);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;}
+.task-item{display:flex;gap:0;border-bottom:1px solid var(--border);transition:background .15s;position:relative;}
+.task-item:last-child{border-bottom:none;}
+.task-item:hover{background:var(--bg3);}
+.task-stripe{width:3px;flex-shrink:0;transition:width .15s;}
+.task-item:hover .task-stripe{width:4px;}
+.task-inner{flex:1;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;}
+.task-issue{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);width:26px;flex-shrink:0;padding-top:2px;}
+.prio{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:6px;}
+.p-hi{background:var(--red);}
+.p-md{background:var(--yellow);}
+@keyframes redPulse{0%,100%{box-shadow:0 0 6px var(--red)}50%{box-shadow:0 0 12px var(--red),0 0 20px rgba(248,81,73,.3)}}
+.p-hi{animation:redPulse 2s ease-in-out infinite;}
+.task-body{flex:1;}
+.task-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;}
+.task-desc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.65;}
+.task-desc code{color:var(--orange);background:rgba(240,136,62,.12);padding:1px 5px;border-radius:3px;font-size:10px;}
+.task-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center;}
+.branch-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:var(--bg4);color:var(--blue);border:1px solid rgba(88,166,255,.15);transition:background .15s,border-color .15s,color .15s;cursor:default;}
+.branch-chip:hover{background:var(--blue-dim);border-color:rgba(88,166,255,.4);color:var(--text);}
+.dep-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:var(--bg4);color:var(--dim);}
+.note-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(210,153,34,.1);color:var(--yellow);border:1px solid rgba(210,153,34,.15);}
+@keyframes notePulse{0%,100%{opacity:1}50%{opacity:.65}}
+.note-chip{animation:notePulse 2.2s ease-in-out infinite;}
+.footer{border-top:1px solid var(--border);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.footer-left{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:flex;align-items:center;gap:8px;}
+@keyframes footerPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.footer-left::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);animation:footerPulse 2.5s ease-in-out infinite;}
+.footer-right{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){h1{font-size:32px;}.stat-grid{grid-template-columns:repeat(3,1fr);}}
+@media print{body::before,body::after{display:none;}*{animation:none!important;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="project-tag">relay · phase_03 · jwt_auth.md</div>
+      <h1>Phase <span>03</span></h1>
+      <div class="header-sub">
+        <span>Echtes Auth, ohne Datenbank</span>
+        <span>3 Entwickler</span>
+        <span>Deadline für diese Phase: 5 Tage</span>
+      </div>
+    </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-n" style="color:var(--green);">6</div>
+          <div class="stat-l">Aufgaben</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:var(--red);">3</div>
+          <div class="stat-l">High</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:var(--blue);">3</div>
+          <div class="stat-l">Devs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="section-title">team rules</div>
+  <div class="rules-block">
+    <div class="rules-titlebar">
+      <div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div>
+      <span class="rules-filename">CONTRIBUTING.md</span>
+    </div>
+    <div class="rules-body">
+      <div class="rule-line">
+        <span class="rule-num">01</span>
+        <span class="rule-icon" style="color:var(--blue);">PR</span>
+        <div class="rule-text">
+          <div class="rule-key">Niemals direkt auf main pushen</div>
+          <div class="rule-desc">Immer einen eigenen Branch erstellen → PR öffnen → warten bis jemand approved → dann mergen.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">02</span>
+        <span class="rule-icon" style="color:var(--orange);">@mention</span>
+        <div class="rule-text">
+          <div class="rule-key">Fremden Code geändert? Autor im PR erwähnen</div>
+          <div class="rule-desc">Wer Code von jemand anderem ändert, schreibt <code>@username</code> im PR und wartet auf dessen Approval.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">03</span>
+        <span class="rule-icon" style="color:var(--red);">.env</span>
+        <div class="rule-text">
+          <div class="rule-key">Keine Passwörter oder Keys in Git</div>
+          <div class="rule-desc">Alles Geheime gehört in die <code>.env</code> Datei — niemals direkt in den Code schreiben.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="section-title">team</div>
+  <div class="team-grid">
+    <div class="team-card tc-green">
+      <div class="team-avatar ta-green">HRZ</div>
+      <div class="team-name"><a href="https://github.com/Sobhanhaerizadeh" target="_blank">Sobhan Haerizadeh</a></div>
+      <div class="team-handle">@sobhanhaerizadeh</div>
+      <div class="team-roles">
+        <span class="role-pill rp-green">Project Management</span>
+        <span class="role-pill rp-green">Frontend</span>
+        <span class="role-pill rp-dim">React · TypeScript</span>
+      </div>
+    </div>
+    <div class="team-card tc-blue">
+      <div class="team-avatar ta-blue">B6</div>
+      <div class="team-name"><a href="https://github.com/NimaB6" target="_blank">Nima Bahrami</a></div>
+      <div class="team-handle">@NimaB6</div>
+      <div class="team-roles">
+        <span class="role-pill rp-blue">Backend</span>
+        <span class="role-pill rp-blue">Cybersecurity</span>
+        <span class="role-pill rp-dim">Python · FastAPI</span>
+      </div>
+    </div>
+    <div class="team-card tc-purple">
+      <div class="team-avatar ta-purple">FG</div>
+      <div class="team-name"><a href="https://github.com/Fatemegh129" target="_blank">Fatemeh Gheysari</a></div>
+      <div class="team-handle">@fatemegh129</div>
+      <div class="team-roles">
+        <span class="role-pill rp-purple">Backend</span>
+        <span class="role-pill rp-purple">Database</span>
+        <span class="role-pill rp-dim">Python · FastAPI</span>
+      </div>
+    </div>
+  </div>
+
+<!-- SOBHAN -->
+<div class="section-title">aufgaben</div>
+<div class="person-section">
+  <div class="person-header" style="border-left: 2px solid var(--green);">
+    <div class="ph-avatar ta-green">SH</div>
+    <div class="ph-info">
+      <div class="ph-name">Sobhan Haerizadeh</div>
+      <div class="ph-role">Project Management · Frontend</div>
+    </div>
+    <div class="ph-count" style="color:var(--green);">02</div>
+  </div>
+  <div class="task-list">
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--red);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#14</span>
+        <div class="prio p-hi"></div>
+        <div class="task-body">
+          <div class="task-title">Frontend mit echtem Backend verbinden</div>
+          <div class="task-desc">
+            Einen zentralen API-Service bauen (z. B. <code>services/api.ts</code>).
+            Login und Register rufen jetzt die echten Backend-Routen auf, statt mit Fake-Daten zu arbeiten.
+            Antworten und Fehler landen sauber in den Formularen aus Phase 02.
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/14-api-service</span>
+            <span class="dep-chip">→ nach #18</span>
+            <span class="note-chip">⚡ Verbindet Frontend &amp; Backend</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--yellow);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#15</span>
+        <div class="prio p-md"></div>
+        <div class="task-body">
+          <div class="task-title">Dashboard mit Aufgaben erweitern</div>
+          <div class="task-desc">
+            Die Dashboard-Seite aus Phase 02 erweitern: Aufgaben als Liste bzw. Karten anzeigen
+            und einen <code>"Neue Aufgabe"</code>-Button mit Formular/Modal zum Erstellen.
+            Die Aufgaben werden erstmal lokal im State gehalten (Mock-Daten, keine Datenbank).
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/15-dashboard-tasks</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- NIMA -->
+<div class="person-section">
+  <div class="person-header" style="border-left: 2px solid var(--blue);">
+    <div class="ph-avatar ta-blue">NB</div>
+    <div class="ph-info">
+      <div class="ph-name">Nima Bahrami</div>
+      <div class="ph-role">Backend · Cybersecurity</div>
+    </div>
+    <div class="ph-count" style="color:var(--blue);">02</div>
+  </div>
+  <div class="task-list">
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--red);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#16</span>
+        <div class="prio p-hi"></div>
+        <div class="task-body">
+          <div class="task-title">Passwörter sicher hashen</div>
+          <div class="task-desc">
+            Passwort-Hashing mit <code>passlib</code>/bcrypt einrichten. Das Passwort des Test-Benutzers
+            wird gehasht gespeichert, und beim Login wird gehasht verglichen — nie im Klartext.
+            Keine Datenbank nötig.
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/16-password-hashing</span>
+            <span class="note-chip">⚡ Sicherheits-Grundlage</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--yellow);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#17</span>
+        <div class="prio p-md"></div>
+        <div class="task-body">
+          <div class="task-title">Token-Sicherheit &amp; einheitliche Fehler</div>
+          <div class="task-desc">
+            Dafür sorgen, dass der <code>SECRET_KEY</code> aus der <code>.env</code> kommt und das Token
+            eine Ablaufzeit hat. Außerdem einheitliche, klare Fehlerantworten bei falschem Login oder
+            fehlendem Token (<code>401</code>/<code>403</code>).
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/17-token-security</span>
+            <span class="dep-chip">→ nach #18</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FATEMEH -->
+<div class="person-section">
+  <div class="person-header" style="border-left: 2px solid var(--purple);">
+    <div class="ph-avatar ta-purple">FG</div>
+    <div class="ph-info">
+      <div class="ph-name">Fatemeh Gheysari</div>
+      <div class="ph-role">Backend · Database</div>
+    </div>
+    <div class="ph-count" style="color:var(--purple);">02</div>
+  </div>
+  <div class="task-list">
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--red);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#18</span>
+        <div class="prio p-hi"></div>
+        <div class="task-body">
+          <div class="task-title">JWT-Token beim Login erstellen</div>
+          <div class="task-desc">
+            Die Login-Route so ändern, dass sie bei korrekten Login-Daten ein echtes JWT-Token zurückgibt
+            (statt <code>"Login erfolgreich"</code>). Es wird mit 1–2 fest hinterlegten Test-Benutzern
+            gearbeitet — keine Datenbank.
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/18-jwt-login</span>
+            <span class="dep-chip">→ nach #16</span>
+            <span class="note-chip">⚡ Herzstück des Auth</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-item">
+      <div class="task-stripe" style="background:var(--yellow);"></div>
+      <div class="task-inner">
+        <span class="task-issue">#19</span>
+        <div class="prio p-md"></div>
+        <div class="task-body">
+          <div class="task-title">Geschützte Backend-Route bauen</div>
+          <div class="task-desc">
+            Eine <code>get_current_user</code>-Dependency erstellen, die das Token prüft, und eine Testroute
+            <code>GET /me</code>. Mit gültigem Token kommt der Benutzer zurück, ohne gültiges Token
+            ein <code>401</code>-Fehler.
+          </div>
+          <div class="task-meta">
+            <span class="branch-chip">feature/19-protected-route</span>
+            <span class="dep-chip">→ nach #18</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">relay · phase_03</div>
+    <div class="footer-right">Created with love · 2026</div>
+  </div>
+
+</div>
+</body>
+</html>
