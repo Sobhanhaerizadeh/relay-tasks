@@ -2,10 +2,13 @@ from fastapi import APIRouter, Request
 from limiter import limiter
 from schemas.response_models import RegisterResponse, LoginResponse
 
+
+
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
+
 
 @router.post("/register", response_model=RegisterResponse)
 def register_mock():
