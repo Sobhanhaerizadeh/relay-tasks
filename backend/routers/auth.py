@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from limiter import limiter
 from schemas.response_models import RegisterResponse, LoginResponse
+from schemas.user import UserCreate
+from token_utils import create_access_token
 
 router = APIRouter(
     prefix="/auth",
@@ -16,8 +18,19 @@ def register_mock():
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("5/minute")
-def login_mock(request: Request):
+def login_mock(user: UserCreate, request: Request):
+    #Fur Test 
+    if user.email != "user@example.com" or user.password != "test123":
+        raise HTTPException(
+            status_code=401,
+            detail="Ungültige Zugangsdaten"
+        )
+
+    access_token = create_access_token(
+        {"sub": user.email}
+    )
+
     return {
         "message": "Login erfolgreich",
-        "token": "mock-jwt-token-xyz123"
+        "token": access_token
     }
