@@ -5,5 +5,5 @@ class RegisterResponse(BaseModel):
     email: str = Field(..., example="user@example.com")
 
 class LoginResponse(BaseModel):
-    message: str = Field(..., example="Login erfolgreich")
-    token: str = Field(..., example="mock-jwt-token-xyz123")
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    token_type: str = Field(default="bearer", example="bearer")
