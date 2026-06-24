@@ -7,3 +7,6 @@ class RegisterResponse(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     token_type: str = Field(default="bearer", example="bearer")
+
+class MeResponse(BaseModel):
+    email: str = Field(..., example="user@example.com")
