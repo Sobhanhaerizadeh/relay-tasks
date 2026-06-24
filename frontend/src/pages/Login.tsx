@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { loginUser } from '../services/api'
 
 function Login() {
 
@@ -21,11 +22,7 @@ function Login() {
             return;
         }
         
-        const response = await fetch('http://localhost:8000/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
+            const response = await loginUser(email, password)
 
         if (response.ok) {
             localStorage.setItem('token', 'fake-token');
