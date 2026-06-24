@@ -24,3 +24,26 @@ Folge diesen Schritten Schritt für Schritt, um das Backend auf deinem lokalen R
 Um Konflikte mit anderen Python-Projekten zu vermeiden, erstellen wir eine isolierte Umgebung:
 ```bash
 python -m venv venv
+```
+
+### Schritt 2: Virtuelle Umgebung aktivieren
+```bash
+# macOS / Linux
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+### Schritt 3: Abhängigkeiten installieren
+```bash
+pip install -r requirements.txt
+```
+
+### Schritt 4: Server starten
+```bash
+uvicorn main:app --reload
+```
+
+Die API läuft jetzt unter `http://localhost:8000`.
+Die interaktive Swagger-Dokumentation findest du unter `http://localhost:8000/docs`.
