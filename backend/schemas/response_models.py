@@ -1,9 +1,12 @@
-from pydantic import BaseModel,EmailStr
+from pydantic import BaseModel, Field
 
 class RegisterResponse(BaseModel):
-    message: str
-    email: EmailStr
+    message: str = Field(..., example="Registrierung erfolgreich")
+    email: str = Field(..., example="user@example.com")
 
 class LoginResponse(BaseModel):
-    message: str
-    token: str
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    token_type: str = Field(default="bearer", example="bearer")
+
+class MeResponse(BaseModel):
+    email: str = Field(..., example="user@example.com")
