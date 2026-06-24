@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { registerUser } from '../services/api'
 
 function Register() {
 
@@ -8,7 +9,7 @@ function Register() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [email, setEmail] = useState('');
 
-    function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
         e.preventDefault();
 
         const newErrors = [];
@@ -17,7 +18,21 @@ function Register() {
         if (email.length === 0) newErrors.push('E-Mail darf nicht leer sein! ');
         if (password!== confirmPassword) newErrors.push('Passwörter stimmen nicht überein! ');
 
-        setError(newErrors);
+        if (newErrors.length > 0)
+        {
+            setError(newErrors);
+            return
+        }
+
+        const response = await registerUser(email, password)
+        if (response.ok)
+        {
+            window.location.href = '/login'
+        }
+        else
+            {
+                setError(['Registrierung fehlgeschlagen!'])
+            }
 
     }
 
