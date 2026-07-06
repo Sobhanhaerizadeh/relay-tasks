@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Request, HTTPException
 from limiter import limiter
 from schemas.response_models import RegisterResponse, LoginResponse
-from schemas.request_models import LoginRequest
 from core.jwt_handler import create_access_token
 from core.config import TEST_USERS
+from security import verify_password
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
+
 
 @router.post(
     "/register",
@@ -22,6 +23,7 @@ def register_mock():
         "email": "user@example.com"
     }
 
+
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -29,17 +31,18 @@ def register_mock():
     description="Authentifiziert den Benutzer und gibt ein JWT-Token zurück."
 )
 @limiter.limit("5/minute")
-def login_mock(request: Request, email: str, password:str):
-    # Prüfe ob Benutzer existiert und Passwort richtig ist.
+def login_mock(request: Request, email: str, password: str):
     user = TEST_USERS.get(email)
 
-    if not user or user["password"] != password:
-        raise HTTPException(status_code=401, detail="Ungültige Credentials")
+    if not user or not verify_password(password, user["password"]):
+        raise HTTPException(
+            status_code=401,
+            detail="Ungültige Zugangsdaten"
+        )
 
-    # Erstelle JWT-Token
     access_token = create_access_token(email=email)
 
     return {
         "access_token": access_token,
         "token_type": "bearer"
-        }
+    }
