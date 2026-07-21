@@ -34,9 +34,12 @@ def register_mock(user: UserCreate):
 )
 @limiter.limit("5/minute")
 def login_mock(request: Request, user: UserCreate):
-    user = TEST_USERS.get(user.email)
+    stored_user = TEST_USERS.get(user.email)
 
-    if not user or not verify_password(user.password, user["password"]):
+    if not stored_user or not verify_password(
+        user.password,
+        stored_user["password"]
+    ):
         raise HTTPException(
             status_code=401,
             detail="Ungültige Zugangsdaten"
