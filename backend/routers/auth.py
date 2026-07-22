@@ -4,6 +4,8 @@ from schemas.response_models import RegisterResponse, LoginResponse
 from core.jwt_handler import create_access_token
 from core.config import TEST_USERS
 from security import verify_password
+from schemas.user import UserCreate
+
 
 router = APIRouter(
     prefix="/auth",
@@ -17,10 +19,10 @@ router = APIRouter(
     summary="Neuen User registrieren",
     description="Erstellt einen Account mit E-Mail und Passwort."
 )
-def register_mock():
+def register_mock(user: UserCreate):
     return {
         "message": "Registrierung erfolgreich",
-        "email": "user@example.com"
+        "email": user.email
     }
 
 
@@ -31,16 +33,19 @@ def register_mock():
     description="Authentifiziert den Benutzer und gibt ein JWT-Token zurück."
 )
 @limiter.limit("5/minute")
-def login_mock(request: Request, email: str, password: str):
-    user = TEST_USERS.get(email)
+def login_mock(request: Request, user: UserCreate):
+    stored_user = TEST_USERS.get(user.email)
 
-    if not user or not verify_password(password, user["password"]):
+    if not stored_user or not verify_password(
+        user.password,
+        stored_user["password"]
+    ):
         raise HTTPException(
             status_code=401,
             detail="Ungültige Zugangsdaten"
         )
 
-    access_token = create_access_token(email=email)
+    access_token = create_access_token(email=user.email)
 
     return {
         "access_token": access_token,

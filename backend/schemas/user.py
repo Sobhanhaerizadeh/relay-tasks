@@ -1,11 +1,12 @@
 from pydantic import BaseModel
 from uuid import UUID
+from pydantic import BaseModel, EmailStr
 
 class UserCreate(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
 class UserOut(BaseModel):
     id: UUID
-    email: str
+    email: EmailStr
