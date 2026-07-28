@@ -14,8 +14,8 @@ oauth2_scheme = OAuth2PasswordBearer(
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if token is None:
         raise HTTPException(
-            status_code=403,
-            detail="Token fehlt"
+            status_code=401,
+            detail="Bitte neu einloggen"
         )
 
     try:
@@ -23,7 +23,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     except JWTError:
         raise HTTPException(
             status_code=401,
-            detail="Ungültiges oder abgelaufenes Token"
+            detail="Bitte neu einloggen"
         )
 
     user = TEST_USERS.get(payload.get("email"))
@@ -31,7 +31,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="Benutzer nicht gefunden"
+            detail="Bitte neu einloggen"
         )
 
     return user

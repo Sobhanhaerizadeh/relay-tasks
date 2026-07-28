@@ -42,7 +42,7 @@ def login_mock(request: Request, user: UserCreate):
     ):
         raise HTTPException(
             status_code=401,
-            detail="Ungültige Zugangsdaten"
+            detail="E-Mail oder Passwort falsch"
         )
 
     access_token = create_access_token(email=user.email)
