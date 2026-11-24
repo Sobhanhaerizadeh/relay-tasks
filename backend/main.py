@@ -4,6 +4,7 @@ from limiter import limiter
 from slowapi.middleware import SlowAPIMiddleware
 from routers.auth import router as auth_router
 from routers.users import router as users_router
+from routers.tasks import router as tasks_router
 
 app = FastAPI(title="Relay Backend")
 
@@ -25,6 +26,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(tasks_router)
 @app.get("/")
 def read_root():
     return "Backend läuft!"
