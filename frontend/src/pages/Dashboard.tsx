@@ -1,31 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import TaskModal, { type Task } from '../components/TaskModal'
+import { createTask, getTasks, type ApiTask } from '../services/api'
 
-const priorityColors: Record<string, string> = {
-    low: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
-    medium: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
-    high: 'bg-red-500/20 text-red-300 border border-red-500/30',
+const statusColors: Record<string, string> = {
+    open: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+    in_progress: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
+    done: 'bg-green-500/20 text-green-300 border border-green-500/30',
 }
 
-const priorityLabels: Record<string, string> = {
-    low: 'Niedrig',
-    medium: 'Mittel',
-    high: 'Hoch',
+const statusLabels: Record<string, string> = {
+    open: 'Offen',
+    in_progress: 'In Arbeit',
+    done: 'Erledigt',
 }
 
 function Dashboard() {
     const [showModal, setShowModal] = useState(false)
-    const [tasks, setTasks] = useState<Task[]>([])
+    const [tasks, setTasks] = useState<ApiTask[]>([])
+    const [error, setError] = useState('')
+
+    // Beim Öffnen: alle Aufgaben vom Backend laden
+    useEffect(() => {
+        getTasks()
+            .then(setTasks)
+            .catch(() => setError('Aufgaben konnten nicht geladen werden. Bitte neu einloggen.'))
+    }, [])
 
     function handleLogout() {
         localStorage.removeItem('token')
         window.location.href = '/login'
     }
 
-    function handleSaveTask(task: Task) {
-        setTasks((prev) => [task, ...prev])
-        setShowModal(false)
+    // Neue Aufgabe im Backend speichern (vorerst nur der Titel)
+    async function handleSaveTask(task: Task) {
+        try {
+            const newTask = await createTask(task.title)
+            setTasks((prev) => [newTask, ...prev])
+            setShowModal(false)
+        } catch {
+            setError('Aufgabe konnte nicht gespeichert werden.')
+        }
     }
 
     return (
@@ -53,6 +68,8 @@ function Dashboard() {
                     </button>
                 </div>
 
+                {error && <p className="text-red-400 font-medium mb-6">{error}</p>}
+
                 {tasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 text-center">
                         <p className="text-gray-500 text-lg mb-4">Noch keine Aufgaben vorhanden.</p>
@@ -67,23 +84,15 @@ function Dashboard() {
                     <ul className="flex flex-col gap-3">
                         {tasks.map((task) => (
                             <li
-                                key={task.id}
+                                key={task.task_id}
                                 className="bg-gray-900 rounded-2xl px-6 py-4 flex items-start justify-between gap-4 shadow shadow-black/20"
                             >
                                 <div className="flex flex-col gap-1 min-w-0">
-                                    <span className="text-white truncate"> Id: {task.id} </span>
-                                    <span className="text-white font-semibold truncate"> Title: {task.title}</span>
-                                    {task.description && (
-                                        <span className="text-gray-400 text-sm line-clamp-2"> Desc: {task.description}</span>
-                                    )}
-                                    {task.dueDate && (
-                                        <span className="text-gray-500 text-xs mt-1">
-                                            Fällig: {new Date(task.dueDate).toLocaleDateString('de-DE')}
-                                        </span>
-                                    )}
+                                    <span className="text-gray-500 text-sm">#{task.task_id}</span>
+                                    <span className="text-white font-semibold truncate">{task.title}</span>
                                 </div>
-                                <span className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${priorityColors[task.priority]}`}>
-                                    {priorityLabels[task.priority]}
+                                <span className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${statusColors[task.status]}`}>
+                                    {statusLabels[task.status] ?? task.status}
                                 </span>
                             </li>
                         ))}
