@@ -1,9 +1,11 @@
 from jose import JWTError
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-
-from core.config import TEST_USERS
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from core.jwt_handler import decode_access_token
+from database import get_db
+from models import User
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login",
@@ -11,7 +13,10 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
     if token is None:
         raise HTTPException(
             status_code=401,
@@ -26,7 +31,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             detail="Bitte neu einloggen"
         )
 
-    user = TEST_USERS.get(payload.get("email"))
+    user = db.scalar(select(User).where(User.email == payload.get("email")))
 
     if not user:
         raise HTTPException(
