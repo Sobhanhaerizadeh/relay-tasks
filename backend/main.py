@@ -5,6 +5,10 @@ from slowapi.middleware import SlowAPIMiddleware
 from routers.auth import router as auth_router
 from routers.users import router as users_router
 from routers.tasks import router as tasks_router
+from database import Base, engine
+import models
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Relay Backend")
 
