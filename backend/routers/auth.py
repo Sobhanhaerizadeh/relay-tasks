@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from database import get_db
+from models import User
 from limiter import limiter
 from schemas.response_models import RegisterResponse, LoginResponse
 from core.jwt_handler import create_access_token
 from core.config import TEST_USERS
-from security import verify_password
+from security import hash_password, verify_password
 from schemas.user import UserCreate
 
 
@@ -19,11 +23,24 @@ router = APIRouter(
     summary="Neuen User registrieren",
     description="Erstellt einen Account mit E-Mail und Passwort."
 )
-def register_mock(user: UserCreate):
-    return {
-        "message": "Registrierung erfolgreich",
-        "email": user.email
-    }
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # 1. Gibt es die E-Mail schon?
+    existing_user = db.scalar(select(User).where(User.email == user.email))
+    if existing_user:
+        raise HTTPException(status_code=400, detail="E-Mail ist bereits registriert!")
+
+    # 2. Passwort hashen (bcrypt erlaubt höchstens 72 Bytes)
+    try:
+        hashed = hash_password(user.password)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Passwort darf höchstens 72 Bytes lang sein")
+
+    # 3. User speichern
+    new_user = User(email=user.email, hashed_password=hashed)
+    db.add(new_user)
+    db.commit()
+
+    return {"message": "Registrierung erfolgreich", "email": new_user.email}
 
 
 @router.post(
