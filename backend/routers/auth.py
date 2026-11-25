@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+from database import get_db
+from models import User
 from limiter import limiter
 from schemas.response_models import RegisterResponse, LoginResponse
 from core.jwt_handler import create_access_token
-from core.config import TEST_USERS
-from security import verify_password
+from security import hash_password, verify_password
 from schemas.user import UserCreate
 
 
@@ -19,11 +22,24 @@ router = APIRouter(
     summary="Neuen User registrieren",
     description="Erstellt einen Account mit E-Mail und Passwort."
 )
-def register_mock(user: UserCreate):
-    return {
-        "message": "Registrierung erfolgreich",
-        "email": user.email
-    }
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # 1. Gibt es die E-Mail schon?
+    existing_user = db.scalar(select(User).where(User.email == user.email))
+    if existing_user:
+        raise HTTPException(status_code=400, detail="E-Mail ist bereits registriert!")
+
+    # 2. Passwort hashen (bcrypt erlaubt höchstens 72 Bytes)
+    try:
+        hashed = hash_password(user.password)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Passwort darf höchstens 72 Bytes lang sein")
+
+    # 3. User speichern
+    new_user = User(email=user.email, hashed_password=hashed)
+    db.add(new_user)
+    db.commit()
+
+    return {"message": "Registrierung erfolgreich", "email": new_user.email}
 
 
 @router.post(
@@ -33,21 +49,17 @@ def register_mock(user: UserCreate):
     description="Authentifiziert den Benutzer und gibt ein JWT-Token zurück."
 )
 @limiter.limit("5/minute")
-def login_mock(request: Request, user: UserCreate):
-    stored_user = TEST_USERS.get(user.email)
+def login(request: Request, user: UserCreate, db: Session = Depends(get_db)):
+    # 1. User per E-Mail aus der Datenbank holen
+    db_user = db.scalar(select(User).where(User.email == user.email))
 
-    if not stored_user or not verify_password(
-        user.password,
-        stored_user["password"]
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="E-Mail oder Passwort falsch"
-        )
+    # 2. Gibt es ihn nicht, oder ist das Passwort falsch? Gleiche Meldung für beides
+    if not db_user or not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="E-Mail oder Passwort falsch")
 
-    access_token = create_access_token(email=user.email)
+    # 3. Letzten Login merken
+    db_user.last_login = func.now()
+    db.commit()
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    access_token = create_access_token(email=db_user.email)
+    return {"access_token": access_token, "token_type": "bearer"}
