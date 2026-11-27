@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay — Phase 06 · Aufgaben bearbeiten, Admin-Rolle & Migrationen</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #080b0f;
+  --bg2:       #0d1117;
+  --bg3:       #161b22;
+  --bg4:       #1c2230;
+  --border:    #21262d;
+  --border2:   #30363d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --dim:       #484f58;
+  --green:     #3fb950;
+  --green-dim: #1a3a22;
+  --blue:      #58a6ff;
+  --blue-dim:  #0d2847;
+  --purple:    #bc8cff;
+  --purple-dim:#2a1a4a;
+  --orange:    #f0883e;
+  --orange-dim:#3a1f08;
+  --red:       #f85149;
+  --yellow:    #d29922;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none;z-index:100;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(63,185,80,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(63,185,80,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+::selection{background:rgba(63,185,80,.22);color:var(--text);}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+a{color:var(--blue);text-decoration:none;transition:color .15s;}
+a:hover{color:var(--text);text-decoration:underline;}
+.page{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:48px 24px 80px;}
+.header{margin-bottom:56px;animation:fadeUp .6s ease both;}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+.project-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.project-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+h1{font-size:clamp(36px,6vw,60px);font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--text);}
+h1 span{color:var(--green);}
+.header-sub{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.header-sub span{display:flex;align-items:center;gap:6px;}
+.header-sub span::before{content:'//';color:var(--dim);}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;min-width:220px;}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;transition:border-color .15s,background .15s;cursor:default;}
+.stat:hover{border-color:var(--border2);background:var(--bg4);}
+.stat-n{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;line-height:1;}
+.stat-l{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.05em;text-transform:uppercase;}
+.section-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);transition:background .3s;}
+.section-title:hover::after{background:var(--border2);}
+.rules-block{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:48px;animation:fadeUp .6s .1s ease both;}
+.rules-titlebar{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;}
+.dot-r{width:10px;height:10px;border-radius:50%;background:#f85149;transition:transform .15s;cursor:default;}
+.dot-y{width:10px;height:10px;border-radius:50%;background:#d29922;transition:transform .15s;cursor:default;}
+.dot-g{width:10px;height:10px;border-radius:50%;background:#3fb950;transition:transform .15s;cursor:default;}
+.dot-r:hover,.dot-y:hover,.dot-g:hover{transform:scale(1.3);}
+.rules-filename{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-left:8px;}
+.rules-body{padding:20px 24px;display:flex;flex-direction:column;gap:0;}
+.rule-line{display:flex;gap:16px;padding:10px 6px;border-bottom:1px solid var(--border);align-items:flex-start;border-radius:6px;margin-left:-6px;margin-right:-6px;transition:background .15s;}
+.rule-line:last-child{border-bottom:none;}
+.rule-line:hover{background:rgba(255,255,255,.025);}
+.rule-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);width:24px;flex-shrink:0;padding-top:1px;user-select:none;}
+.rule-icon{font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0;padding-top:1px;width:60px;}
+.rule-text{flex:1;}
+.rule-key{font-size:13px;font-weight:600;color:var(--text);}
+.rule-desc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6;}
+.rule-desc code{color:var(--orange);background:var(--orange-dim);padding:1px 5px;border-radius:3px;font-size:10px;transition:background .15s;}
+.rule-desc code:hover{background:rgba(240,136,62,.22);}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:48px;animation:fadeUp .6s .2s ease both;}
+.team-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;}
+.team-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.tc-green::before{background:var(--green);}
+.tc-blue::before{background:var(--blue);}
+.tc-purple::before{background:var(--purple);}
+.tc-green:hover{transform:translateY(-3px);border-color:rgba(63,185,80,.35);box-shadow:0 8px 24px rgba(63,185,80,.07);}
+.tc-blue:hover{transform:translateY(-3px);border-color:rgba(88,166,255,.35);box-shadow:0 8px 24px rgba(88,166,255,.07);}
+.tc-purple:hover{transform:translateY(-3px);border-color:rgba(188,140,255,.35);box-shadow:0 8px 24px rgba(188,140,255,.07);}
+.tc-green:hover .team-avatar{box-shadow:0 0 14px rgba(63,185,80,.25);}
+.tc-blue:hover .team-avatar{box-shadow:0 0 14px rgba(88,166,255,.25);}
+.tc-purple:hover .team-avatar{box-shadow:0 0 14px rgba(188,140,255,.25);}
+.team-avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:12px;font-family:'JetBrains Mono',monospace;}
+.ta-green{background:var(--green-dim);color:var(--green);}
+.ta-blue{background:var(--blue-dim);color:var(--blue);}
+.ta-purple{background:var(--purple-dim);color:var(--purple);}
+.team-name{font-size:15px;font-weight:700;}
+.team-handle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+.team-roles{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;}
+.role-pill{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;padding:3px 8px;border-radius:4px;letter-spacing:.04em;}
+.rp-green{background:var(--green-dim);color:var(--green);}
+.rp-blue{background:var(--blue-dim);color:var(--blue);}
+.rp-purple{background:var(--purple-dim);color:var(--purple);}
+.rp-dim{background:var(--bg4);color:var(--muted);}
+.person-section{margin-bottom:40px;animation:fadeUp .6s .3s ease both;}
+.person-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-bottom:none;border-radius:12px 12px 0 0;}
+.ph-avatar{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+.ph-info{flex:1;}
+.ph-name{font-size:14px;font-weight:600;}
+.ph-role{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+.ph-count{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+.task-list{background:var(--bg2);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;}
+.task-item{display:flex;gap:0;border-bottom:1px solid var(--border);transition:background .15s;position:relative;}
+.task-item:last-child{border-bottom:none;}
+.task-item:hover{background:var(--bg3);}
+.task-stripe{width:3px;flex-shrink:0;transition:width .15s;}
+.task-item:hover .task-stripe{width:4px;}
+.task-inner{flex:1;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;}
+.task-issue{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);width:26px;flex-shrink:0;padding-top:2px;}
+.prio{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:6px;}
+.p-hi{background:var(--red);}
+.p-md{background:var(--yellow);}
+@keyframes redPulse{0%,100%{box-shadow:0 0 6px var(--red)}50%{box-shadow:0 0 12px var(--red),0 0 20px rgba(248,81,73,.3)}}
+.p-hi{animation:redPulse 2s ease-in-out infinite;}
+.task-body{flex:1;}
+.task-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;}
+.task-desc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.65;}
+.task-desc code{color:var(--orange);background:rgba(240,136,62,.12);padding:1px 5px;border-radius:3px;font-size:10px;}
+.code-block{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8;}
+.task-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center;}
+.branch-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:var(--bg4);color:var(--blue);border:1px solid rgba(88,166,255,.15);transition:background .15s,border-color .15s,color .15s;cursor:default;}
+.branch-chip:hover{background:var(--blue-dim);border-color:rgba(88,166,255,.4);color:var(--text);}
+.dep-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:var(--bg4);color:var(--dim);}
+.note-chip{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(210,153,34,.1);color:var(--yellow);border:1px solid rgba(210,153,34,.15);}
+@keyframes notePulse{0%,100%{opacity:1}50%{opacity:.65}}
+.note-chip{animation:notePulse 2.2s ease-in-out infinite;}
+.info-block{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:48px;display:flex;align-items:flex-start;gap:12px;animation:fadeUp .6s .25s ease both;}
+.info-icon{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);background:var(--green-dim);border:1px solid rgba(63,185,80,.2);border-radius:4px;padding:2px 6px;flex-shrink:0;margin-top:1px;}
+.info-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6;}
+.info-text strong{color:var(--green);font-weight:500;}
+.footer{border-top:1px solid var(--border);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.footer-left{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:flex;align-items:center;gap:8px;}
+@keyframes footerPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.footer-left::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);animation:footerPulse 2.5s ease-in-out infinite;}
+.footer-right{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){h1{font-size:32px;}.stat-grid{grid-template-columns:repeat(3,1fr);}}
+@media print{body::before,body::after{display:none;}*{animation:none!important;}}
+.info-text code{color:var(--orange);background:rgba(240,136,62,.12);padding:1px 5px;border-radius:3px;font-size:10px;}
+.code-block.flow{white-space:pre;overflow-x:auto;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="project-tag">relay · phase_06 · roles.md</div>
+        <h1>Phase <span>06</span></h1>
+        <div class="header-sub">
+          <span>Aufgaben bearbeiten, Admin-Rolle, Migrationen</span>
+          <span>3 Entwickler</span>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-n" style="color:var(--green);">7</div>
+          <div class="stat-l">Aufgaben</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:var(--red);">3</div>
+          <div class="stat-l">High</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" style="color:var(--blue);">3</div>
+          <div class="stat-l">Devs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="section-title">team rules</div>
+  <div class="rules-block">
+    <div class="rules-titlebar">
+      <div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div>
+      <span class="rules-filename">CONTRIBUTING.md</span>
+    </div>
+    <div class="rules-body">
+      <div class="rule-line">
+        <span class="rule-num">01</span>
+        <span class="rule-icon" style="color:var(--blue);">PR</span>
+        <div class="rule-text">
+          <div class="rule-key">Niemals direkt auf main pushen</div>
+          <div class="rule-desc">Immer einen eigenen Branch erstellen → PR öffnen → warten bis jemand approved → dann mergen.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">02</span>
+        <span class="rule-icon" style="color:var(--orange);">@mention</span>
+        <div class="rule-text">
+          <div class="rule-key">Fremden Code geändert? Autor im PR erwähnen</div>
+          <div class="rule-desc">Wer Code von jemand anderem ändert, schreibt <code>@username</code> im PR und wartet auf dessen Approval.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">03</span>
+        <span class="rule-icon" style="color:var(--red);">.env</span>
+        <div class="rule-text">
+          <div class="rule-key">Keine Passwörter oder Keys in Git</div>
+          <div class="rule-desc">Alles Geheime gehört in die <code>.env</code> Datei — niemals direkt in den Code schreiben.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">04</span>
+        <span class="rule-icon" style="color:var(--green);">pip</span>
+        <div class="rule-text">
+          <div class="rule-key">Neues Paket installiert? Sofort in requirements.txt</div>
+          <div class="rule-desc">Jedes neue Paket gehört im selben PR in die <code>requirements.txt</code> — sonst kann niemand das Backend starten.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">05</span>
+        <span class="rule-icon" style="color:var(--purple);">issue</span>
+        <div class="rule-text">
+          <div class="rule-key">Jeder PR schließt sein Issue</div>
+          <div class="rule-desc">In die PR-Beschreibung <code>Closes #&lt;nummer&gt;</code> schreiben — dann schließt GitHub das Issue beim Mergen automatisch.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">06</span>
+        <span class="rule-icon" style="color:var(--yellow);">CI</span>
+        <div class="rule-text">
+          <div class="rule-key">Erst mergen, wenn der Haken grün ist</div>
+          <div class="rule-desc">Sobald #27 gemergt ist, laufen die Tests bei jedem PR automatisch. Rotes <code>✗</code> → erst reparieren, dann mergen.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">07</span>
+        <span class="rule-icon" style="color:var(--blue);">alembic</span>
+        <div class="rule-text">
+          <div class="rule-key">Neu · Datenbank ändern? Nur mit Migration</div>
+          <div class="rule-desc">Ab #29: Wer ein Modell ändert, legt im selben PR eine Migration an (<code>alembic revision --autogenerate</code>).
+            Nach jedem <code>git pull</code>: <code>alembic upgrade head</code>. Niemals <code>relay.db</code> löschen, um einen Fehler zu „reparieren“.</div>
+        </div>
+      </div>
+      <div class="rule-line">
+        <span class="rule-num">08</span>
+        <span class="rule-icon" style="color:var(--red);">403</span>
+        <div class="rule-text">
+          <div class="rule-key">Neu · Rechte prüft immer das Backend</div>
+          <div class="rule-desc">Ein versteckter Button im Frontend schützt nichts — jeder kann die API direkt aufrufen.
+            Wer etwas nicht darf, bekommt vom Backend <code>403</code>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="section-title">team</div>
+  <div class="team-grid">
+    <div class="team-card tc-green">
+      <div class="team-avatar ta-green">HRZ</div>
+      <div class="team-name"><a href="https://github.com/Sobhanhaerizadeh" target="_blank">Sobhan Haerizadeh</a></div>
+      <div class="team-handle">@sobhanhaerizadeh</div>
+      <div class="team-roles">
+        <span class="role-pill rp-green">Project Management</span>
+        <span class="role-pill rp-green">Frontend</span>
+        <span class="role-pill rp-green">Database</span>
+        <span class="role-pill rp-dim">React · SQLAlchemy</span>
+      </div>
+    </div>
+    <div class="team-card tc-blue">
+      <div class="team-avatar ta-blue">B6</div>
+      <div class="team-name"><a href="https://github.com/NimaB6" target="_blank">Nima Bahrami</a></div>
+      <div class="team-handle">@NimaB6</div>
+      <div class="team-roles">
+        <span class="role-pill rp-blue">Backend</span>
+        <span class="role-pill rp-blue">Cybersecurity</span>
+        <span class="role-pill rp-dim">Python · pytest</span>
+      </div>
+    </div>
+    <div class="team-card tc-purple">
+      <div class="team-avatar ta-purple">FG</div>
+      <div class="team-name"><a href="https://github.com/Fatemegh129" target="_blank">Fatemeh Gheysari</a></div>
+      <div class="team-handle">@fatemegh129</div>
+      <div class="team-roles">
+        <span class="role-pill rp-purple">Backend</span>
+        <span class="role-pill rp-purple">Database</span>
+        <span class="role-pill rp-dim">Python · TypeScript</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div class="info-block" style="margin-bottom:12px;">
+    <span class="info-icon">ZIEL</span>
+    <div class="info-text">
+    <strong>Aufgaben werden richtig nutzbar.</strong>
+    Jede Aufgabe hat Beschreibung, Priorität und Fälligkeitsdatum. Alle sehen alle Aufgaben und dürfen neue anlegen —
+    <strong>nur Admins</strong> dürfen Aufgaben bearbeiten oder löschen. Die Datenbank wird ab jetzt mit Migrationen geändert, nicht mehr neu erstellt.
+    </div>
+  </div>
+
+  <div class="info-block" style="margin-bottom:12px;">
+    <span class="info-icon">INFO</span>
+    <div class="info-text">
+    <strong>Reihenfolge:</strong>
+    Sobhan startet sofort: #29 → #30 → #31.
+    Nima startet mit #32, sobald sein #27 gemergt ist, und macht nach #31 mit #33 weiter.
+    Fatemeh macht erst #28 fertig, startet #34 nach #30 und #35 nach #33.
+    Niemand arbeitet gleichzeitig an denselben Dateien.
+    </div>
+  </div>
+
+  <div class="code-block flow" style="margin-bottom:48px;"><span style="color:var(--dim);"># Wer wartet auf wen?</span><br><span style="color:var(--green);">Sobhan </span> <span style="color:var(--muted);">#29 Alembic ──► #30 Felder ──► #31 Admin-Rolle</span><br><span style="color:var(--blue);">Nima   </span> <span style="color:var(--muted);">#27 ──► #32 Tests ─────────────────────► #33 Bearbeiten/Löschen</span> <span style="color:var(--dim);">(nach #31)</span><br><span style="color:var(--purple);">Fatemeh</span> <span style="color:var(--muted);">#28 ──► #34 Felder im Dashboard</span> <span style="color:var(--dim);">(nach #30)</span> <span style="color:var(--muted);">──► #35 Admin-Buttons</span> <span style="color:var(--dim);">(nach #33)</span></div>
+
+  <!-- SOBHAN -->
+  <div class="section-title">aufgaben</div>
+  <div class="person-section">
+    <div class="person-header" style="border-left: 2px solid var(--green);">
+      <div class="ph-avatar ta-green">SH</div>
+      <div class="ph-info">
+        <div class="ph-name">Sobhan Haerizadeh</div>
+        <div class="ph-role">Project Management · Database</div>
+      </div>
+      <div class="ph-count" style="color:var(--green);">03</div>
+    </div>
+    <div class="task-list">
+
+      <!-- #29 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--red);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#29</span>
+          <div class="prio p-hi"></div>
+          <div class="task-body">
+            <div class="task-title">Migrationen mit Alembic einrichten</div>
+            <div class="task-desc">
+              Das Problem: <code>create_all</code> legt nur fehlende Tabellen an — neue Spalten in einer bestehenden Tabelle kommen nie an.
+              Ohne Migrationen müsste jeder bei jeder Änderung seine <code>relay.db</code> löschen.
+              Deine Aufgabe: Alembic einrichten und <code>create_all</code> aus <code>main.py</code> entfernen.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># im Ordner backend/</span><br>
+              <span style="color:var(--muted);">pip install alembic</span> <span style="color:var(--dim);"># → requirements.txt</span><br>
+              <span style="color:var(--muted);">alembic init migrations</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># migrations/env.py — Alembic soll unsere Modelle und unsere DB kennen</span><br>
+              <span style="color:var(--blue);">from</span> <span style="color:var(--muted);">database</span> <span style="color:var(--blue);">import</span> <span style="color:var(--muted);">Base, DATABASE_URL</span><br>
+              <span style="color:var(--blue);">import</span> <span style="color:var(--muted);">models</span>  <span style="color:var(--dim);"># registriert alle Tabellen</span><br>
+              <br>
+              <span style="color:var(--muted);">config.set_main_option(</span><span style="color:var(--green);">"sqlalchemy.url"</span><span style="color:var(--muted);">, DATABASE_URL)</span><br>
+              <span style="color:var(--blue);">target_metadata</span> <span style="color:var(--muted);">= Base.metadata</span><br>
+              <br>
+              <span style="color:var(--dim);"># in beiden context.configure(...)-Aufrufen ergänzen — SQLite kann sonst keine Spalten ändern</span><br>
+              <span style="color:var(--muted);">render_as_batch=</span><span style="color:var(--blue);">True</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># erste Migration = die Tabellen, die es schon gibt</span><br>
+              <span style="color:var(--muted);">alembic revision --autogenerate -m</span> <span style="color:var(--green);">"users und tasks"</span><br>
+              <span style="color:var(--muted);">alembic upgrade head</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Tipp: Die erzeugte Datei in <code>migrations/versions/</code> immer durchlesen — Alembic rät nur.
+              Wer schon eine <code>relay.db</code> hat, löscht sie einmalig vor <code>alembic upgrade head</code>.
+              Im <code>backend/README.md</code> den Startbefehl ergänzen: erst <code>alembic upgrade head</code>, dann <code>uvicorn</code>.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">relay.db löschen → alembic upgrade head → Tabellen users, tasks, alembic_version existieren</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">main.py enthält kein create_all mehr, Backend startet normal</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Register, Login und /tasks funktionieren wie vorher</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/29-alembic</span>
+              <span class="note-chip">⚡ Fundament für alle DB-Änderungen</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #30 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--red);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#30</span>
+          <div class="prio p-hi"></div>
+          <div class="task-body">
+            <div class="task-title">Aufgaben bekommen Beschreibung, Priorität &amp; Fälligkeitsdatum</div>
+            <div class="task-desc">
+              Das Problem: Das Formular im Frontend fragt nach Beschreibung, Priorität und Datum — gespeichert wird aber nur der Titel.
+              <code>description</code> gibt es schon in der Tabelle, <code>priority</code> und <code>due_date</code> fehlen.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># models/task.py — zwei neue Spalten</span><br>
+              <span style="color:var(--blue);">priority</span><span style="color:var(--muted);">: Mapped[str] = mapped_column(default=</span><span style="color:var(--green);">"medium"</span><span style="color:var(--muted);">, server_default=</span><span style="color:var(--green);">"medium"</span><span style="color:var(--muted);">)</span><br>
+              <span style="color:var(--blue);">due_date</span><span style="color:var(--muted);">: Mapped[date | None]</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># schemas/task.py</span><br>
+              <span style="color:var(--blue);">Priority</span> <span style="color:var(--muted);">= Literal[</span><span style="color:var(--green);">"low"</span><span style="color:var(--muted);">,</span> <span style="color:var(--green);">"medium"</span><span style="color:var(--muted);">,</span> <span style="color:var(--green);">"high"</span><span style="color:var(--muted);">]</span><br>
+              <br>
+              <span style="color:var(--blue);">class</span> <span style="color:var(--yellow);">TaskCreate</span><span style="color:var(--muted);">(BaseModel):</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">title: str = Field(min_length=1, max_length=200)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">description: str | None =</span> <span style="color:var(--blue);">None</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">priority: Priority =</span> <span style="color:var(--green);">"medium"</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">due_date: date | None =</span> <span style="color:var(--blue);">None</span><br>
+              <br>
+              <span style="color:var(--dim);"># TaskOut bekommt zusätzlich: description · priority · due_date · created_at</span><br>
+              <br>
+              <span style="color:var(--dim);"># routers/tasks.py — owner_id kommt weiter nur vom Token</span><br>
+              <span style="color:var(--muted);">new_task = Task(**task.model_dump(), owner_id=current_user.user_id)</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Warum <code>server_default</code>? Die Migration fügt eine Pflicht-Spalte in eine Tabelle ein, in der schon Aufgaben stehen —
+              die brauchen einen Wert. Danach: <code>alembic revision --autogenerate -m "task felder"</code>.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">alembic upgrade head auf einer alten DB → alte Aufgaben haben priority "medium"</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">POST /tasks mit allen Feldern → GET /tasks zeigt sie</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">leerer Titel oder priority "egal" →</span> <span style="color:var(--red);">422</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/30-task-fields</span>
+              <span class="dep-chip">→ nach #29</span>
+              <span class="note-chip">⚡ Erste echte Migration</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #31 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--yellow);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#31</span>
+          <div class="prio p-md"></div>
+          <div class="task-body">
+            <div class="task-title">Admin-Rolle in der Datenbank</div>
+            <div class="task-desc">
+              Das Problem: Das Backend weiß nicht, wer Admin ist. Deine Aufgabe: die Tabellen <code>roles</code> und
+              <code>user_roles</code> aus unserem Datenbankmodell bauen, die Rolle <code>admin</code> anlegen
+              und <code>/me</code> sagen lassen, ob der User Admin ist.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># models/role.py</span><br>
+              <span style="color:var(--yellow);">Role</span> <span style="color:var(--muted);">→ role_id (PK) · name (unique)</span><br>
+              <span style="color:var(--yellow);">UserRole</span> <span style="color:var(--muted);">→ user_id → users.user_id · role_id → roles.role_id</span> <span style="color:var(--dim);">(beide zusammen = PK)</span><br>
+              <br>
+              <span style="color:var(--dim);"># Migration: nach create_table die Rolle gleich mit anlegen</span><br>
+              <span style="color:var(--muted);">roles = op.create_table(</span><span style="color:var(--green);">"roles"</span><span style="color:var(--muted);">, ...)</span><br>
+              <span style="color:var(--muted);">op.bulk_insert(roles, [{</span><span style="color:var(--green);">"name"</span><span style="color:var(--muted);">:</span> <span style="color:var(--green);">"admin"</span><span style="color:var(--muted);">}])</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># core/roles.py — wird von #33 wiederverwendet</span><br>
+              <span style="color:var(--blue);">def</span> <span style="color:var(--yellow);">is_admin</span><span style="color:var(--muted);">(user: User, db: Session) -&gt; bool:</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">return</span> <span style="color:var(--muted);">db.scalar(</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">select(UserRole).join(Role)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">.where(UserRole.user_id == user.user_id, Role.name ==</span> <span style="color:var(--green);">"admin"</span><span style="color:var(--muted);">)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">)</span> <span style="color:var(--blue);">is not None</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># backend/make_admin.py — einen User zum Admin machen</span><br>
+              <span style="color:var(--muted);">python make_admin.py sobhan@example.com</span><br>
+              <br>
+              <span style="color:var(--dim);"># /me antwortet jetzt mit</span><br>
+              <span style="color:var(--muted);">{</span><span style="color:var(--green);">"email"</span><span style="color:var(--muted);">:</span> <span style="color:var(--green);">"sobhan@example.com"</span><span style="color:var(--muted);">,</span> <span style="color:var(--green);">"is_admin"</span><span style="color:var(--muted);">:</span> <span style="color:var(--blue);">true</span><span style="color:var(--muted);">}</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Warum ein Skript statt eines API-Endpunkts? Dann kann sich niemand über die API selbst zum Admin machen —
+              nur wer Zugriff auf den Server hat. <code>is_admin</code> kommt in <code>MeResponse</code>.
+              Beide Modelle in <code>models/__init__.py</code> importieren.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">alembic upgrade head → Tabelle roles enthält "admin"</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">normaler User → /me zeigt is_admin: false</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">make_admin.py → neu einloggen → /me zeigt is_admin: true</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">make_admin.py zweimal für denselben User → kein Fehler</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/31-admin-role</span>
+              <span class="dep-chip">→ nach #30</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NIMA -->
+  <div class="person-section">
+    <div class="person-header" style="border-left: 2px solid var(--blue);">
+      <div class="ph-avatar ta-blue">NB</div>
+      <div class="ph-info">
+        <div class="ph-name">Nima Bahrami</div>
+        <div class="ph-role">Backend · Cybersecurity</div>
+      </div>
+      <div class="ph-count" style="color:var(--blue);">02</div>
+    </div>
+    <div class="task-list">
+
+      <!-- #32 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--yellow);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#32</span>
+          <div class="prio p-md"></div>
+          <div class="task-body">
+            <div class="task-title">Tests mit eigener Test-Datenbank: Register &amp; Aufgaben</div>
+            <div class="task-desc">
+              Warum: Seit Phase 5 speichert das Backend echte User und Aufgaben. Diese Wege sind noch ungetestet —
+              und Tests dürfen niemals die echte <code>relay.db</code> anfassen.
+              Deine Aufgabe: In <code>conftest.py</code> eine Datenbank im Arbeitsspeicher einbauen und diese Tests schreiben:
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># tests/conftest.py — jede Test-Funktion bekommt eine leere DB</span><br>
+              <span style="color:var(--blue);">engine</span> <span style="color:var(--muted);">= create_engine(</span><span style="color:var(--green);">"sqlite://"</span><span style="color:var(--muted);">, connect_args={</span><span style="color:var(--green);">"check_same_thread"</span><span style="color:var(--muted);">: False}, poolclass=StaticPool)</span><br>
+              <span style="color:var(--blue);">TestSession</span> <span style="color:var(--muted);">= sessionmaker(bind=engine)</span><br>
+              <br>
+              <span style="color:var(--yellow);">@pytest.fixture</span><br>
+              <span style="color:var(--blue);">def</span> <span style="color:var(--yellow);">client</span><span style="color:var(--muted);">():</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">Base.metadata.drop_all(engine)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">Base.metadata.create_all(engine)</span><br>
+              <br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">def</span> <span style="color:var(--yellow);">test_db</span><span style="color:var(--muted);">():</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">with</span> <span style="color:var(--muted);">TestSession()</span> <span style="color:var(--blue);">as</span> <span style="color:var(--muted);">db:</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">yield</span> <span style="color:var(--muted);">db</span><br>
+              <br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">app.dependency_overrides[get_db] = test_db</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">limiter.reset()</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">yield</span> <span style="color:var(--muted);">TestClient(app)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">app.dependency_overrides.clear()</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># tests/test_register.py</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">neuer User →</span> <span style="color:var(--green);">200</span><span style="color:var(--muted);">, gleiche E-Mail nochmal →</span> <span style="color:var(--red);">400</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Passwort über 72 Bytes →</span> <span style="color:var(--red);">400</span> <span style="color:var(--muted);">(kein 500er)</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">registrieren → einloggen → /me zeigt die eigene E-Mail</span><br>
+              <br>
+              <span style="color:var(--dim);"># tests/test_tasks.py</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">POST /tasks → Aufgabe kommt zurück, GET /tasks enthält sie</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">POST mit "owner_id": 999 im Body → owner_id ist trotzdem der eigene User</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">zwei Aufgaben anlegen → GET liefert die neueste zuerst</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">User B sieht die Aufgaben von User A (das Team sieht alles)</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Tipp: Eine kleine Hilfsfunktion <code>login(client, email)</code> schreiben, die registriert, einloggt und die Header
+              <code>{"Authorization": "Bearer …"}</code> zurückgibt — das brauchst du in fast jedem Test und später in #33.
+              Prüfen: Nach <code>pytest</code> darf sich <code>backend/relay.db</code> nicht verändert haben.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">im Ordner backend/: pytest → alles grün, auch die Tests aus #27</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">im PR erscheint der grüne Haken von „Backend-Tests“</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/32-tests-database</span>
+              <span class="dep-chip">→ nach #27</span>
+              <span class="note-chip">⚡ Tests ohne echte Daten</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #33 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--red);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#33</span>
+          <div class="prio p-hi"></div>
+          <div class="task-body">
+            <div class="task-title">Aufgaben bearbeiten &amp; löschen — nur für Admins</div>
+            <div class="task-desc">
+              Das Problem: Aufgaben können nur angelegt werden. Deine Aufgabe: <code>PATCH</code> und <code>DELETE</code> bauen —
+              und dafür sorgen, dass <strong>nur Admins</strong> sie benutzen dürfen. Normale User bekommen <code>403</code>.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># core/dependencies.py</span><br>
+              <span style="color:var(--blue);">def</span> <span style="color:var(--yellow);">require_admin</span><span style="color:var(--muted);">(current_user: User = Depends(get_current_user),</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">db: Session = Depends(get_db)) -&gt; User:</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">if not</span> <span style="color:var(--muted);">is_admin(current_user, db):</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">raise</span> <span style="color:var(--muted);">HTTPException(status_code=</span><span style="color:var(--red);">403</span><span style="color:var(--muted);">, detail=</span><span style="color:var(--green);">"Nur Admins dürfen das"</span><span style="color:var(--muted);">)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--blue);">return</span> <span style="color:var(--muted);">current_user</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># routers/tasks.py</span><br>
+              <span style="color:var(--muted);">PATCH  /tasks/{task_id}</span>  <span style="color:var(--dim);"># TaskUpdate: alle Felder optional, dazu status</span><br>
+              <span style="color:var(--muted);">DELETE /tasks/{task_id}</span>  <span style="color:var(--dim);"># → 204</span><br>
+              <br>
+              <span style="color:var(--dim);"># nur die Felder ändern, die wirklich mitgeschickt wurden</span><br>
+              <span style="color:var(--blue);">for</span> <span style="color:var(--muted);">key, value</span> <span style="color:var(--blue);">in</span> <span style="color:var(--muted);">changes.model_dump(exclude_unset=</span><span style="color:var(--blue);">True</span><span style="color:var(--muted);">).items():</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted);">setattr(task, key, value)</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Reihenfolge der Prüfungen: kein Token → <code>401</code>, kein Admin → <code>403</code>, Aufgabe gibt es nicht → <code>404</code>.
+              <code>require_admin</code> läuft also <em>vor</em> der Suche nach der Aufgabe — so kann ein normaler User nicht einmal herausfinden,
+              welche IDs es gibt. <code>status</code> darf nur <code>open</code>, <code>in_progress</code> oder <code>done</code> sein.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># tests/test_admin.py — Admin im Test: UserRole direkt in die Test-DB schreiben</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">PATCH / DELETE ohne Token →</span> <span style="color:var(--red);">401</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">PATCH / DELETE als normaler User →</span> <span style="color:var(--red);">403</span> <span style="color:var(--muted);">und die Aufgabe ist unverändert</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Admin ändert nur den status → Titel bleibt gleich</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Admin löscht →</span> <span style="color:var(--green);">204</span><span style="color:var(--muted);">, danach fehlt sie in GET /tasks</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">unbekannte ID als Admin →</span> <span style="color:var(--red);">404</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">{"title": null} oder status "fertig" →</span> <span style="color:var(--red);">422</span><span style="color:var(--muted);">, kein 500er</span>
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">alle Tests oben grün</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">in Swagger (/docs) tauchen PATCH und DELETE auf</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/33-admin-edit-delete</span>
+              <span class="dep-chip">→ nach #31 + #32</span>
+              <span class="note-chip">⚡ Erste echte Berechtigung</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FATEMEH -->
+  <div class="person-section">
+    <div class="person-header" style="border-left: 2px solid var(--purple);">
+      <div class="ph-avatar ta-purple">FG</div>
+      <div class="ph-info">
+        <div class="ph-name">Fatemeh Gheysari</div>
+        <div class="ph-role">Backend · Database</div>
+      </div>
+      <div class="ph-count" style="color:var(--purple);">02</div>
+    </div>
+    <div class="task-list">
+
+      <!-- #34 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--yellow);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#34</span>
+          <div class="prio p-md"></div>
+          <div class="task-body">
+            <div class="task-title">Dashboard: alle Felder speichern &amp; anzeigen</div>
+            <div class="task-desc">
+              Das Problem: Das Formular hat Beschreibung, Priorität und Datum, aber das Dashboard schickt nur den Titel ans Backend.
+              Sobald #30 gemergt ist, nimmt das Backend alle Felder an. Deine Aufgabe: <code>services/api.ts</code>,
+              <code>components/TaskModal.tsx</code> und <code>pages/Dashboard.tsx</code>.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);">// services/api.ts</span><br>
+              <span style="color:var(--blue);">export type</span> <span style="color:var(--yellow);">ApiTask</span> <span style="color:var(--muted);">= {</span><br>
+              &nbsp;&nbsp;<span style="color:var(--muted);">task_id: number · title: string · status: string · owner_id: number</span><br>
+              &nbsp;&nbsp;<span style="color:var(--muted);">description: string | null</span><br>
+              &nbsp;&nbsp;<span style="color:var(--muted);">priority:</span> <span style="color:var(--green);">'low'</span> <span style="color:var(--muted);">|</span> <span style="color:var(--green);">'medium'</span> <span style="color:var(--muted);">|</span> <span style="color:var(--green);">'high'</span><br>
+              &nbsp;&nbsp;<span style="color:var(--muted);">due_date: string | null</span>  <span style="color:var(--dim);">// "2026-12-24"</span><br>
+              &nbsp;&nbsp;<span style="color:var(--muted);">created_at: string</span><br>
+              <span style="color:var(--muted);">}</span><br>
+              <br>
+              <span style="color:var(--dim);">// createTask schickt jetzt alles mit</span><br>
+              <span style="color:var(--muted);">body: JSON.stringify({ title, description, priority, due_date })</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Achtung im <code>TaskModal</code>: Ohne Datum wird gerade „heute“ eingesetzt (<code>dueDate || new Date()…</code>) —
+              stattdessen <code>null</code> schicken, sonst ist jede Aufgabe ohne Datum sofort „fällig“.
+              Auf der Karte zeigen: Beschreibung (max. 2 Zeilen, <code>line-clamp-2</code>), Priorität als farbiges Badge,
+              Datum mit <code>toLocaleDateString('de-DE')</code> — rot, wenn es vorbei und die Aufgabe nicht erledigt ist.
+              <code>Dashboard.tsx</code> und <code>api.ts</code> hat Sobhan zuletzt geändert → <code>@Sobhanhaerizadeh</code> im PR erwähnen.
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Aufgabe mit allen Feldern anlegen → Seite neu laden → alles ist noch da</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Aufgabe ohne Datum → kein Datum auf der Karte</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">Datum in der Vergangenheit → rot</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/34-dashboard-fields</span>
+              <span class="dep-chip">→ nach #28 + #30</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #35 -->
+      <div class="task-item">
+        <div class="task-stripe" style="background:var(--yellow);"></div>
+        <div class="task-inner">
+          <span class="task-issue">#35</span>
+          <div class="prio p-md"></div>
+          <div class="task-body">
+            <div class="task-title">Bearbeiten &amp; Löschen im Dashboard — Buttons nur für Admins</div>
+            <div class="task-desc">
+              Sobald #33 gemergt ist, können Admins Aufgaben ändern und löschen. Deine Aufgabe: Die Buttons dafür bauen —
+              und nur Admins zeigen. Ob jemand Admin ist, sagt <code>/me</code> (<code>is_admin</code>).
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);">// services/api.ts — drei neue Funktionen</span><br>
+              <span style="color:var(--yellow);">getMe</span><span style="color:var(--muted);">()</span>                 <span style="color:var(--dim);">// GET    /me          → { email, is_admin }</span><br>
+              <span style="color:var(--yellow);">updateTask</span><span style="color:var(--muted);">(id, changes)</span>  <span style="color:var(--dim);">// PATCH  /tasks/{id}  → ApiTask</span><br>
+              <span style="color:var(--yellow);">deleteTask</span><span style="color:var(--muted);">(id)</span>           <span style="color:var(--dim);">// DELETE /tasks/{id}  → 204, keine Antwort lesen!</span><br>
+              <br>
+              <span style="color:var(--dim);">// Dashboard.tsx</span><br>
+              <span style="color:var(--blue);">const</span> <span style="color:var(--muted);">[isAdmin, setIsAdmin] = useState(</span><span style="color:var(--blue);">false</span><span style="color:var(--muted);">)</span><br>
+              <span style="color:var(--muted);">{isAdmin &amp;&amp; &lt;button&gt;Bearbeiten&lt;/button&gt;}</span><br>
+              <span style="color:var(--muted);">{isAdmin &amp;&amp; &lt;button&gt;Löschen&lt;/button&gt;}</span>  <span style="color:var(--dim);">// vorher confirm('Wirklich löschen?')</span>
+            </div>
+            <div class="task-desc" style="margin-top:10px;">
+              Bearbeiten: <code>TaskModal</code> wiederverwenden — mit einer neuen Prop <code>initialTask</code> für die vorhandenen Werte
+              und einem Auswahlfeld für den Status (Offen · In Arbeit · Erledigt).
+              Kommt trotzdem ein <code>403</code>, die Meldung „Nur Admins dürfen das“ zeigen.
+              Wichtig: Die versteckten Buttons sind nur Komfort — geschützt wird im Backend (Regel 08).
+            </div>
+            <div class="code-block">
+              <span style="color:var(--dim);"># Fertig, wenn …</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">als normaler User: keine Bearbeiten-/Löschen-Buttons</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">als Admin: Status ändern → Badge wechselt, bleibt nach Neuladen</span><br>
+              <span style="color:var(--green);">✓</span> <span style="color:var(--muted);">als Admin: löschen → Aufgabe verschwindet, bleibt nach Neuladen weg</span>
+            </div>
+            <div class="task-meta" style="margin-top:10px;">
+              <span class="branch-chip">feature/35-dashboard-admin</span>
+              <span class="dep-chip">→ nach #33 + #34</span>
+              <span class="note-chip">⚡ Macht Relay zur echten Team-App</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- OUTLOOK -->
+  <div class="section-title">ausblick</div>
+  <div class="info-block">
+    <span class="info-icon">PHASE 7</span>
+    <div class="info-text">
+    <strong>Projekte &amp; Zuweisungen.</strong>
+    Die übrigen Tabellen aus unserem Datenbankmodell: <code>projects</code>, <code>project_assignees</code> und <code>task_assignees</code> —
+    Aufgaben gehören zu Projekten und können Personen zugewiesen werden. Dank Alembic aus #29 ist das dann nur noch eine neue Migration.
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">relay · phase_06</div>
+    <div class="footer-right">Created with love · 2026</div>
+  </div>
+
+</div>
+</body>
+</html>
